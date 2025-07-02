@@ -3,18 +3,25 @@
 /**
  * PDO_Wrapper Class
  *
- https://github.com/vaidyamanishjoshi/PDO-Wrapper-Class
- 
- * A robust and secure PDO wrapper for MySQL database interactions.
+ * A robust and secure PDO wrapper for various database interactions (MySQL, PostgreSQL, SQLite, SQL Server).
  * This class provides methods for connecting, executing queries,
  * sanitizing input, retrieving results, and performing CRUD operations
  * with built-in security features like prepared statements.
+ *
+ * This version includes a basic Query Builder, Object Mapping capabilities,
+ * dynamic identifier quoting for multi-database support, and a singleton
+ * pattern for basic connection pooling.
  */
 class PDO_Wrapper {
     /**
      * @var PDO The PDO database connection instance.
      */
     private $pdo;
+
+    /**
+     * @var string The name of the database driver being used (e.g., 'mysql', 'pgsql', 'sqlite', 'sqlsrv').
+     */
+    private $driver;
 
     /**
      * @var int The total number of queries executed by this instance.
@@ -37,28 +44,103 @@ class PDO_Wrapper {
     ];
 
     /**
-     * Constructor: Initializes the database connection.
-     *
-     * @param string $host The database host.
-     * @param string $db_name The database name.
-     * @param string $username The database username.
-     * @param string $password The database password.
-     * @param array $options Optional PDO connection options.
-     * @throws PDOException If the connection fails.
+     * @var bool Flag to determine if debug messages should be displayed.
      */
-    public function __construct($host, $db_name, $username, $password, $options = []) {
+    private $display_debug = false;
+
+    /**
+     * @var PDO_Wrapper The single instance of the PDO_Wrapper class (for singleton pattern).
+     */
+    private static $instance = null;
+
+    // Query Builder properties
+    private $query_parts = [];
+    private $query_bindings = [];
+    private $model_class = null;
+
+    /**
+     * Private Constructor: Initializes the database connection for a specified driver.
+     * Implemented as private for the Singleton pattern.
+     *
+     * @param string $driver The database driver (e.g., 'mysql', 'pgsql', 'sqlite', 'sqlsrv').
+     * @param string $host The database host (ignored for SQLite).
+     * @param string $db_name The database name or path for SQLite.
+     * @param string $username The database username (ignored for SQLite).
+     * @param string $password The database password (ignored for SQLite).
+     * @param array $options Optional PDO connection options.
+     * @param bool $display_debug Flag to display debug error messages directly.
+     * @throws PDOException If the connection fails or driver is unsupported.
+     */
+    private function __construct($driver, $host, $db_name, $username, $password, $options = [], $display_debug = false) {
+        $this->driver = strtolower($driver);
+        $this->display_debug = $display_debug; // Set the debug flag
+        $dsn = '';
+
+        // Set default timezone for consistency
+        date_default_timezone_set('Asia/Kolkata');
+
+        switch ($this->driver) {
+            case 'mysql':
+                $dsn = "mysql:host=$host;dbname=$db_name;charset=utf8mb4";
+                break;
+            case 'pgsql':
+                $dsn = "pgsql:host=$host;dbname=$db_name";
+                break;
+            case 'sqlite':
+                // For SQLite, $db_name is the path to the database file
+                $dsn = "sqlite:$db_name";
+                // Username and password are not applicable for SQLite
+                $username = null;
+                $password = null;
+                break;
+            case 'sqlsrv': // SQL Server
+                $dsn = "sqlsrv:Server=$host;Database=$db_name";
+                break;
+            default:
+                throw new PDOException("Unsupported database driver: " . $driver);
+        }
+
         try {
-            $dsn = "mysql:host=$host;dbname=$db_name;charset=utf8mb4";
             $default_options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Throw exceptions on errors
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // Fetch results as associative arrays
                 PDO::ATTR_EMULATE_PREPARES   => false,                  // Disable emulation for better security and performance
+                PDO::ATTR_PERSISTENT         => true,                   // Enable persistent connections for basic pooling
             ];
             $this->pdo = new PDO($dsn, $username, $password, array_merge($default_options, $options));
         } catch (PDOException $e) {
-            $this->handle_error($e, "Failed to connect to the database.");
+            $this->handle_error($e, "Failed to connect to the database using driver '{$this->driver}'.");
             throw $e; // Re-throw the exception after handling
         }
+    }
+
+    /**
+     * Prevents cloning of the instance.
+     */
+    private function __clone() {}
+
+    /**
+     * Prevents deserialization of the instance.
+     */
+    private function __wakeup() {}
+
+    /**
+     * Returns the single instance of the PDO_Wrapper class (Singleton pattern).
+     *
+     * @param string $driver The database driver (e.g., 'mysql', 'pgsql', 'sqlite', 'sqlsrv').
+     * @param string $host The database host (ignored for SQLite).
+     * @param string $db_name The database name or path for SQLite.
+     * @param string $username The database username (ignored for SQLite).
+     * @param string $password The database password (ignored for SQLite).
+     * @param array $options Optional PDO connection options.
+     * @param bool $display_debug Flag to display debug error messages directly.
+     * @return PDO_Wrapper The single instance of the PDO_Wrapper.
+     */
+    public static function get_instance($driver, $host, $db_name, $username, $password, $options = [], $display_debug = false) {
+        if (self::$instance === null) {
+            self::$instance = new self($driver, $host, $db_name, $username, $password, $options, $display_debug);
+        }
+        return self::$instance;
     }
 
     /**
@@ -85,19 +167,481 @@ class PDO_Wrapper {
             $this->send_error_email($error_message);
         }
 
-        // For development, you might want to display the error, but for production, avoid this.
-        // echo "Database Error: " . $error_message;
+        // Display error only if DISPLAY_DEBUG is true
+        if ($this->display_debug) {
+            echo "<p class='error'>Database Error: " . htmlspecialchars($error_message) . "</p>";
+        }
     }
 
     /**
      * @usage
      * Connect to a given MySQL server.
-     * This function is implicitly called by the constructor.
+     * This function is implicitly called by the constructor via the singleton `get_instance` method.
      * No direct usage example needed as it's part of object instantiation.
      *
      * Example:
-     * $db = new PDO_Wrapper('localhost', 'your_db', 'your_user', 'your_password');
+     * $db = PDO_Wrapper::get_instance('mysql', 'localhost', 'your_db', 'your_user', 'your_password', [], true);
      */
+
+    /**
+     * @usage
+     * Quote an identifier (table name, column name) based on the current database driver.
+     * This ensures cross-database compatibility for identifiers.
+     * For MySQL, it allows identifiers without backticks unless they contain special characters.
+     *
+     * @param string $identifier The identifier to quote.
+     * @return string The quoted identifier.
+     */
+    private function quote_identifier($identifier) {
+        // Check if the identifier already contains a dot (e.g., 'table.column')
+        // This is a simple heuristic; more robust parsing might be needed for complex cases.
+        if (strpos($identifier, '.') !== false) {
+            $parts = explode('.', $identifier);
+            return implode('.', array_map([$this, 'quote_identifier'], $parts));
+        }
+
+        switch ($this->driver) {
+            case 'mysql':
+                // For MySQL, only quote if the identifier contains special characters or is a reserved word.
+                // Simple alphanumeric and underscore identifiers do not require quoting.
+                if (preg_match('/^[a-zA-Z0-9_]+$/', $identifier)) {
+                    return $identifier;
+                }
+                return "`" . str_replace("`", "``", $identifier) . "`";
+            case 'pgsql':
+            case 'sqlsrv':
+                return "\"" . str_replace("\"", "\"\"", $identifier) . "\"";
+            case 'sqlite':
+                // SQLite generally doesn't require quoting unless identifiers have special characters.
+                // For simplicity, we'll quote them with double quotes if they contain special chars.
+                if (preg_match('/[^a-zA-Z0-9_]/', $identifier)) {
+                    return "\"" . str_replace("\"", "\"\"", $identifier) . "\"";
+                }
+                return $identifier;
+            default:
+                return $identifier; // Fallback
+        }
+    }
+
+    /**
+     * Resets the query builder parts.
+     */
+    private function reset_query_builder() {
+        $this->query_parts = [
+            'select' => ['*'],
+            'from' => null,
+            'join' => [],
+            'where' => [],
+            'group_by' => [],
+            'having' => [],
+            'order_by' => [],
+            'limit' => null,
+            'offset' => null,
+            'union' => [],
+        ];
+        $this->query_bindings = [];
+        $this->model_class = null;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Start a SELECT query.
+     *
+     * @param string|array $columns The columns to select. Defaults to '*'.
+     * @return PDO_Wrapper
+     */
+    public function select($columns = '*') {
+        $this->reset_query_builder();
+        $this->query_parts['select'] = is_array($columns) ? $columns : [$columns];
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Specify the table for the query.
+     *
+     * @param string $table The table name.
+     * @param string|null $alias Optional alias for the table.
+     * @return PDO_Wrapper
+     */
+    public function from($table, $alias = null) {
+        $from_clause = $this->quote_identifier($table);
+        if ($alias) {
+            $from_clause .= " AS " . $this->quote_identifier($alias);
+        }
+        $this->query_parts['from'] = $from_clause;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a JOIN clause to the query.
+     *
+     * @param string $table The table to join.
+     * @param string $on_clause The ON clause for the join (e.g., 'users.id = posts.user_id').
+     * @param string $type The type of join (e.g., 'INNER', 'LEFT', 'RIGHT', 'FULL').
+     * @return PDO_Wrapper
+     */
+    public function join($table, $on_clause, $type = 'INNER') {
+        $this->query_parts['join'][] = strtoupper($type) . " JOIN " . $this->quote_identifier($table) . " ON " . $on_clause;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a WHERE clause to the query.
+     *
+     * @param string $column The column name.
+     * @param mixed $operator The operator (e.g., '=', '>', '<', 'LIKE', 'IN').
+     * @param mixed $value The value to compare against.
+     * @return PDO_Wrapper
+     */
+    public function where($column, $operator, $value = null) {
+        // Handle cases where operator is omitted (e.g., where('id', 1))
+        if (func_num_args() == 2) {
+            $value = $operator;
+            $operator = '=';
+        }
+
+        $placeholder = ":where_" . count($this->query_bindings);
+        $this->query_parts['where'][] = $this->quote_identifier($column) . " {$operator} {$placeholder}";
+        $this->query_bindings[$placeholder] = $value;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add an AND WHERE clause to the query.
+     *
+     * @param string $column The column name.
+     * @param mixed $operator The operator.
+     * @param mixed $value The value.
+     * @return PDO_Wrapper
+     */
+    public function and_where($column, $operator, $value = null) {
+        return $this->where($column, $operator, $value); // Simply calls where, as where implies AND by default
+    }
+
+    /**
+     * @usage
+     * Add an OR WHERE clause to the query.
+     *
+     * @param string $column The column name.
+     * @param mixed $operator The operator.
+     * @param mixed $value The value.
+     * @return PDO_Wrapper
+     */
+    public function or_where($column, $operator, $value = null) {
+        // Handle cases where operator is omitted (e.g., or_where('id', 1))
+        if (func_num_args() == 2) {
+            $value = $operator;
+            $operator = '=';
+        }
+
+        $placeholder = ":or_where_" . count($this->query_bindings);
+        $this->query_parts['where'][] = "OR " . $this->quote_identifier($column) . " {$operator} {$placeholder}";
+        $this->query_bindings[$placeholder] = $value;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a WHERE IN clause.
+     *
+     * @param string $column The column name.
+     * @param array $values An array of values.
+     * @return PDO_Wrapper
+     */
+    public function where_in($column, array $values) {
+        if (empty($values)) {
+            $this->query_parts['where'][] = "1=0"; // Always false
+            return $this;
+        }
+        $placeholders = [];
+        foreach ($values as $index => $value) {
+            $placeholder = ":where_in_" . count($this->query_bindings) . "_" . $index;
+            $placeholders[] = $placeholder;
+            $this->query_bindings[$placeholder] = $value;
+        }
+        $this->query_parts['where'][] = $this->quote_identifier($column) . " IN (" . implode(", ", $placeholders) . ")";
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a WHERE NOT IN clause.
+     *
+     * @param string $column The column name.
+     * @param array $values An array of values.
+     * @return PDO_Wrapper
+     */
+    public function where_not_in($column, array $values) {
+        if (empty($values)) {
+            $this->query_parts['where'][] = "1=1"; // Always true
+            return $this;
+        }
+        $placeholders = [];
+        foreach ($values as $index => $value) {
+            $placeholder = ":where_not_in_" . count($this->query_bindings) . "_" . $index;
+            $placeholders[] = $placeholder;
+            $this->query_bindings[$placeholder] = $value;
+        }
+        $this->query_parts['where'][] = $this->quote_identifier($column) . " NOT IN (" . implode(", ", $placeholders) . ")";
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a WHERE LIKE clause.
+     *
+     * @param string $column The column name.
+     * @param string $value The value with wildcards (e.g., '%search%').
+     * @return PDO_Wrapper
+     */
+    public function where_like($column, $value) {
+        $placeholder = ":where_like_" . count($this->query_bindings);
+        $this->query_parts['where'][] = $this->quote_identifier($column) . " LIKE {$placeholder}";
+        $this->query_bindings[$placeholder] = $value;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a WHERE NULL clause.
+     *
+     * @param string $column The column name.
+     * @return PDO_Wrapper
+     */
+    public function where_null($column) {
+        $this->query_parts['where'][] = $this->quote_identifier($column) . " IS NULL";
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a WHERE NOT NULL clause.
+     *
+     * @param string $column The column name.
+     * @return PDO_Wrapper
+     */
+    public function where_not_null($column) {
+        $this->query_parts['where'][] = $this->quote_identifier($column) . " IS NOT NULL";
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a GROUP BY clause.
+     *
+     * @param string|array $columns The column(s) to group by.
+     * @return PDO_Wrapper
+     */
+    public function group_by($columns) {
+        $this->query_parts['group_by'] = array_merge($this->query_parts['group_by'], (array)$columns);
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a HAVING clause.
+     *
+     * @param string $column The column name.
+     * @param mixed $operator The operator.
+     * @param mixed $value The value.
+     * @return PDO_Wrapper
+     */
+    public function having($column, $operator, $value = null) {
+        if (func_num_args() == 2) {
+            $value = $operator;
+            $operator = '=';
+        }
+        $placeholder = ":having_" . count($this->query_bindings);
+        $this->query_parts['having'][] = $this->quote_identifier($column) . " {$operator} {$placeholder}";
+        $this->query_bindings[$placeholder] = $value;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add an ORDER BY clause.
+     *
+     * @param string $column The column to order by.
+     * @param string $direction The direction ('ASC' or 'DESC').
+     * @return PDO_Wrapper
+     */
+    public function order_by($column, $direction = 'ASC') {
+        $this->query_parts['order_by'][] = $this->quote_identifier($column) . " " . strtoupper($direction);
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Set the LIMIT for the query.
+     *
+     * @param int $limit The maximum number of rows to return.
+     * @return PDO_Wrapper
+     */
+    public function limit($limit) {
+        $this->query_parts['limit'] = (int)$limit;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Set the OFFSET for the query.
+     *
+     * @param int $offset The offset from the beginning of the result set.
+     * @return PDO_Wrapper
+     */
+    public function offset($offset) {
+        $this->query_parts['offset'] = (int)$offset;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Add a UNION clause.
+     *
+     * @param string $sql The SQL query string for the UNION.
+     * @param array $params Parameters for the UNION query.
+     * @param bool $all Whether to use UNION ALL.
+     * @return PDO_Wrapper
+     */
+    public function union($sql, $params = [], $all = false) {
+        $this->query_parts['union'][] = [
+            'sql' => $sql,
+            'params' => $params,
+            'all' => $all
+        ];
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Set the model class for object mapping.
+     *
+     * @param string $class_name The name of the class to map results to.
+     * @return PDO_Wrapper
+     */
+    public function as_object($class_name) {
+        if (!class_exists($class_name)) {
+            throw new InvalidArgumentException("Class '{$class_name}' does not exist for object mapping.");
+        }
+        $this->model_class = $class_name;
+        return $this;
+    }
+
+    /**
+     * @usage
+     * Execute the built query and return all results.
+     *
+     * @return array An array of results (associative arrays or objects if `as_object()` was called).
+     */
+    public function get() {
+        $sql = $this->build_select_query();
+        $params = $this->query_bindings;
+
+        $this->reset_query_builder(); // Reset builder state after execution
+
+        try {
+            $stmt = $this->query($sql, $params);
+            if ($this->model_class) {
+                return $stmt->fetchAll(PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE, $this->model_class);
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Error handled by query()
+            return [];
+        }
+    }
+
+    /**
+     * @usage
+     * Execute the built query and return the first row.
+     *
+     * @return mixed A single row (associative array or object) or false if no results.
+     */
+    public function first() {
+        $this->limit(1); // Ensure only one row is fetched
+        $sql = $this->build_select_query();
+        $params = $this->query_bindings;
+
+        $this->reset_query_builder(); // Reset builder state after execution
+
+        try {
+            $stmt = $this->query($sql, $params);
+            if ($this->model_class) {
+                $stmt->setFetchMode(PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE, $this->model_class);
+                return $stmt->fetch();
+            }
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Error handled by query()
+            return false;
+        }
+    }
+
+    /**
+     * Helper to build the SELECT query string from query parts.
+     *
+     * @return string The compiled SQL query.
+     * @throws LogicException If 'from' table is not specified.
+     */
+    private function build_select_query() {
+        if (!$this->query_parts['from']) {
+            throw new LogicException("No table specified for SELECT query. Use from() method.");
+        }
+
+        $columns = implode(', ', array_map([$this, 'quote_identifier'], $this->query_parts['select']));
+        $sql = "SELECT {$columns} FROM {$this->query_parts['from']}";
+
+        if (!empty($this->query_parts['join'])) {
+            $sql .= " " . implode(" ", $this->query_parts['join']);
+        }
+
+        if (!empty($this->query_parts['where'])) {
+            // Ensure first WHERE condition doesn't start with OR
+            $first_where = array_shift($this->query_parts['where']);
+            if (strpos(trim(strtoupper($first_where)), 'OR') === 0) {
+                $first_where = substr(trim($first_where), 2); // Remove leading 'OR'
+            }
+            array_unshift($this->query_parts['where'], $first_where);
+
+            $sql .= " WHERE " . implode(" ", $this->query_parts['where']);
+        }
+
+        if (!empty($this->query_parts['group_by'])) {
+            $sql .= " GROUP BY " . implode(', ', array_map([$this, 'quote_identifier'], $this->query_parts['group_by']));
+        }
+
+        if (!empty($this->query_parts['having'])) {
+            $sql .= " HAVING " . implode(" AND ", $this->query_parts['having']);
+        }
+
+        if (!empty($this->query_parts['order_by'])) {
+            $sql .= " ORDER BY " . implode(', ', $this->query_parts['order_by']);
+        }
+
+        if ($this->query_parts['limit'] !== null) {
+            $sql .= " LIMIT " . $this->query_parts['limit'];
+        }
+
+        if ($this->query_parts['offset'] !== null) {
+            $sql .= " OFFSET " . $this->query_parts['offset'];
+        }
+
+        // Handle UNION clauses
+        if (!empty($this->query_parts['union'])) {
+            foreach ($this->query_parts['union'] as $union_clause) {
+                $union_type = $union_clause['all'] ? 'UNION ALL' : 'UNION';
+                $sql .= " {$union_type} ({$union_clause['sql']})";
+                $this->query_bindings = array_merge($this->query_bindings, $union_clause['params']);
+            }
+        }
+
+        return $sql;
+    }
 
     /**
      * @usage
@@ -127,7 +671,7 @@ class PDO_Wrapper {
                     }
                     // Bind by name for associative arrays, by position for indexed arrays
                     if (is_string($key)) {
-                        $stmt->bindValue(":$key", $value, $type);
+                        $stmt->bindValue($key, $value, $type);
                     } else {
                         $stmt->bindValue($key + 1, $value, $type); // +1 for 1-based indexing in PDO
                     }
@@ -143,18 +687,18 @@ class PDO_Wrapper {
 
     /**
      * @usage
-     * Sanitize / filter input data function.
-     * This function uses filter_var for basic sanitization. For more complex scenarios,
+     * Filter input data function.
+     * This function uses filter_var for basic filtering. For more complex scenarios,
      * consider specific validation rules or custom regex.
      *
-     * @param mixed $data The data to sanitize.
+     * @param mixed $data The data to filter.
      * @param int $filter The filter to apply (e.g., FILTER_SANITIZE_STRING, FILTER_SANITIZE_EMAIL).
      * Note: FILTER_SANITIZE_STRING is deprecated in PHP 8.1+. Use htmlspecialchars or similar for HTML output.
      * For general input, FILTER_UNSAFE_RAW with appropriate flags, or specific filters are better.
      * @param mixed $options Options for the filter.
-     * @return mixed The sanitized data.
+     * @return mixed The filtered data.
      */
-    public function sanitize($data, $filter = FILTER_UNSAFE_RAW, $options = []) {
+    public function filter($data, $filter = FILTER_UNSAFE_RAW, $options = []) {
         // For string data, consider HTML escaping if it's going to be outputted to HTML
         if (is_string($data) && $filter === FILTER_UNSAFE_RAW) {
             return htmlspecialchars(strip_tags($data), ENT_QUOTES, 'UTF-8');
@@ -195,7 +739,7 @@ class PDO_Wrapper {
      * This is typically used after an INSERT query on a table with an AUTO_INCREMENT primary key.
      *
      * @param string|null $name The name of the sequence object from which the ID should be returned.
-     * Not generally used with MySQL, leave as null.
+     * (Relevant for some databases like PostgreSQL, leave null for MySQL).
      * @return string The ID of the last inserted row.
      */
     public function last_insert_id($name = null) {
@@ -209,9 +753,16 @@ class PDO_Wrapper {
      *
      * @param PDOStatement $stmt The PDOStatement object returned by `query()`.
      * @param int $fetch_mode The fetch mode (e.g., PDO::FETCH_ASSOC, PDO::FETCH_OBJ).
+     * @param string|null $model_class Optional class name for object mapping.
      * @return array An array containing all of the result set rows.
      */
-    public function get_results(PDOStatement $stmt, $fetch_mode = PDO::FETCH_ASSOC) {
+    public function get_results(PDOStatement $stmt, $fetch_mode = PDO::FETCH_ASSOC, $model_class = null) {
+        if ($model_class) {
+            if (!class_exists($model_class)) {
+                throw new InvalidArgumentException("Class '{$model_class}' does not exist for object mapping.");
+            }
+            return $stmt->fetchAll(PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE, $model_class);
+        }
         return $stmt->fetchAll($fetch_mode);
     }
 
@@ -222,9 +773,17 @@ class PDO_Wrapper {
      *
      * @param PDOStatement $stmt The PDOStatement object returned by `query()`.
      * @param int $fetch_mode The fetch mode (e.g., PDO::FETCH_ASSOC, PDO::FETCH_OBJ).
+     * @param string|null $model_class Optional class name for object mapping.
      * @return mixed The next row from a result set as an array or object, or false if there are no more rows.
      */
-    public function get_row(PDOStatement $stmt, $fetch_mode = PDO::FETCH_ASSOC) {
+    public function get_row(PDOStatement $stmt, $fetch_mode = PDO::FETCH_ASSOC, $model_class = null) {
+        if ($model_class) {
+            if (!class_exists($model_class)) {
+                throw new InvalidArgumentException("Class '{$model_class}' does not exist for object mapping.");
+            }
+            $stmt->setFetchMode(PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE, $model_class);
+            return $stmt->fetch();
+        }
         return $stmt->fetch($fetch_mode);
     }
 
@@ -242,9 +801,6 @@ class PDO_Wrapper {
         if (is_array($value)) {
             return array_map([$this, 'escape'], $value);
         }
-        // Quote method is used for escaping. It adds quotes around the string.
-        // This is generally safe for literal values, but not for identifiers.
-        // For identifiers, you should use backticks or ensure they are whitelisted.
         return $this->pdo->quote($value);
     }
 
@@ -258,6 +814,8 @@ class PDO_Wrapper {
      * @return bool True if any common MySQL function call is found, false otherwise.
      */
     public function has_mysql_function_calls($value) {
+        // This list is primarily for MySQL-specific functions and common SQL injection patterns.
+        // For other databases, this list might need to be expanded or modified.
         $functions = [
             'SLEEP(', 'BENCHMARK(', 'LOAD_FILE(', 'OUTFILE(', 'INFILE(',
             'UNION SELECT', 'OR 1=1', 'AND 1=1', 'DROP TABLE', 'DELETE FROM',
@@ -291,17 +849,37 @@ class PDO_Wrapper {
     /**
      * @usage
      * Check if a table exists in the connected database.
+     * This method uses driver-specific queries for better compatibility.
      *
      * @param string $table_name The name of the table to check.
      * @return bool True if the table exists, false otherwise.
      */
     public function table_exists($table_name) {
         try {
-            $stmt = $this->query("SHOW TABLES LIKE :table_name", [':table_name' => $table_name]);
+            $sql = "";
+            $params = [':table_name' => $table_name];
+
+            switch ($this->driver) {
+                case 'mysql':
+                    $sql = "SHOW TABLES LIKE :table_name";
+                    break;
+                case 'pgsql':
+                    $sql = "SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = :table_name";
+                    break;
+                case 'sqlite':
+                    $sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=:table_name";
+                    break;
+                case 'sqlsrv': // SQL Server
+                    $sql = "SELECT 1 FROM sys.tables WHERE name = :table_name";
+                    break;
+                default:
+                    error_log("Unsupported PDO driver for table_exists: " . $this->driver);
+                    return false;
+            }
+            $stmt = $this->query($sql, $params);
             return $stmt->rowCount() > 0;
         } catch (PDOException $e) {
-            // Log the error but don't re-throw if just checking existence
-            error_log("Error checking table existence for '$table_name': " . $e->getMessage());
+            error_log("Error checking table existence for '$table_name' with driver '{$this->driver}': " . $e->getMessage());
             return false;
         }
     }
@@ -322,10 +900,10 @@ class PDO_Wrapper {
         $where_clauses = [];
         $params = [];
         foreach ($conditions as $field => $value) {
-            $where_clauses[] = "`{$field}` = :{$field}";
+            $where_clauses[] = $this->quote_identifier($field) . " = :{$field}";
             $params[":{$field}"] = $value;
         }
-        $sql = "SELECT 1 FROM `{$table}` WHERE " . implode(' AND ', $where_clauses) . " LIMIT 1";
+        $sql = "SELECT 1 FROM " . $this->quote_identifier($table) . " WHERE " . implode(' AND ', $where_clauses) . " LIMIT 1";
 
         try {
             $stmt = $this->query($sql, $params);
@@ -350,9 +928,10 @@ class PDO_Wrapper {
         }
 
         $fields = array_keys($data);
+        $quoted_fields = array_map([$this, 'quote_identifier'], $fields);
         $placeholders = array_map(function($field) { return ":{$field}"; }, $fields);
 
-        $sql = "INSERT INTO `{$table}` (`" . implode("`, `", $fields) . "`) VALUES (" . implode(", ", $placeholders) . ")";
+        $sql = "INSERT INTO " . $this->quote_identifier($table) . " (" . implode(", ", $quoted_fields) . ") VALUES (" . implode(", ", $placeholders) . ")";
 
         $params = [];
         foreach ($data as $field => $value) {
@@ -381,8 +960,7 @@ class PDO_Wrapper {
         }
 
         $fields = array_keys($data[0]);
-        $placeholders_template = "(" . implode(", ", array_map(function($field) { return ":{$field}"; }, $fields)) . ")";
-
+        $quoted_fields = array_map([$this, 'quote_identifier'], $fields);
         $values_clauses = [];
         $all_params = [];
         $param_counter = 0;
@@ -393,14 +971,14 @@ class PDO_Wrapper {
             foreach ($fields as $field) {
                 $unique_placeholder = ":{$field}_{$param_counter}";
                 $current_placeholders[] = $unique_placeholder;
-                $current_params[$unique_placeholder] = $row[$field] ?? null; // Handle missing keys
+                $current_params[$unique_placeholder] = $row[$field] ?? null;
             }
             $values_clauses[] = "(" . implode(", ", $current_placeholders) . ")";
             $all_params = array_merge($all_params, $current_params);
             $param_counter++;
         }
 
-        $sql = "INSERT INTO `{$table}` (`" . implode("`, `", $fields) . "`) VALUES " . implode(", ", $values_clauses);
+        $sql = "INSERT INTO " . $this->quote_identifier($table) . " (" . implode(", ", $quoted_fields) . ") VALUES " . implode(", ", $values_clauses);
 
         try {
             $stmt = $this->query($sql, $all_params);
@@ -428,7 +1006,7 @@ class PDO_Wrapper {
         $set_clauses = [];
         $params = [];
         foreach ($data as $field => $value) {
-            $set_clauses[] = "`{$field}` = :set_{$field}";
+            $set_clauses[] = $this->quote_identifier($field) . " = :set_{$field}";
             $params[":set_{$field}"] = $value;
         }
 
@@ -438,20 +1016,19 @@ class PDO_Wrapper {
                 list($in_clause, $in_params) = $this->in($field, $value);
                 $where_clauses[] = $in_clause;
                 $params = array_merge($params, $in_params);
-            } elseif (strpos($field, 'FIND_IN_SET') === 0) { // Handle FIND_IN_SET
-                // Expected format: 'FIND_IN_SET(field)' => 'value'
+            } elseif (strpos($field, 'FIND_IN_SET') === 0) { // Handle FIND_IN_SET (MySQL specific)
                 $original_field = str_replace('FIND_IN_SET(', '', $field);
                 $original_field = rtrim($original_field, ')');
                 list($find_in_set_clause, $find_in_set_params) = $this->find_in_set($original_field, $value);
                 $where_clauses[] = $find_in_set_clause;
                 $params = array_merge($params, $find_in_set_params);
             } else {
-                $where_clauses[] = "`{$field}` = :where_{$field}";
+                $where_clauses[] = $this->quote_identifier($field) . " = :where_{$field}";
                 $params[":where_{$field}"] = $value;
             }
         }
 
-        $sql = "UPDATE `{$table}` SET " . implode(", ", $set_clauses) . " WHERE " . implode(" AND ", $where_clauses);
+        $sql = "UPDATE " . $this->quote_identifier($table) . " SET " . implode(", ", $set_clauses) . " WHERE " . implode(" AND ", $where_clauses);
 
         try {
             $stmt = $this->query($sql, $params);
@@ -481,19 +1058,19 @@ class PDO_Wrapper {
                 list($in_clause, $in_params) = $this->in($field, $value);
                 $where_clauses[] = $in_clause;
                 $params = array_merge($params, $in_params);
-            } elseif (strpos($field, 'FIND_IN_SET') === 0) { // Handle FIND_IN_SET
+            } elseif (strpos($field, 'FIND_IN_SET') === 0) { // Handle FIND_IN_SET (MySQL specific)
                 $original_field = str_replace('FIND_IN_SET(', '', $field);
                 $original_field = rtrim($original_field, ')');
                 list($find_in_set_clause, $find_in_set_params) = $this->find_in_set($original_field, $value);
                 $where_clauses[] = $find_in_set_clause;
                 $params = array_merge($params, $find_in_set_params);
             } else {
-                $where_clauses[] = "`{$field}` = :{$field}";
+                $where_clauses[] = $this->quote_identifier($field) . " = :{$field}";
                 $params[":{$field}"] = $value;
             }
         }
 
-        $sql = "DELETE FROM `{$table}` WHERE " . implode(" AND ", $where_clauses);
+        $sql = "DELETE FROM " . $this->quote_identifier($table) . " WHERE " . implode(" AND ", $where_clauses);
 
         try {
             $stmt = $this->query($sql, $params);
@@ -523,13 +1100,14 @@ class PDO_Wrapper {
             $placeholders[] = $placeholder;
             $params[$placeholder] = $value;
         }
-        return ["`{$field}` IN (" . implode(", ", $placeholders) . ")", $params];
+        return [$this->quote_identifier($field) . " IN (" . implode(", ", $placeholders) . ")", $params];
     }
 
     /**
      * @usage
      * Helper function to generate an SQL 'FIND_IN_SET' clause and its parameters for prepared statements.
      * This is intended to be used internally by update/delete functions or directly for custom queries.
+     * Note: This function is MySQL-specific. For other databases, consider alternative data structures.
      *
      * @param string $field The field name (the comma-separated string column).
      * @param string $value The value to find in the set.
@@ -537,7 +1115,7 @@ class PDO_Wrapper {
      */
     public function find_in_set($field, $value) {
         $placeholder = ":{$field}_find_in_set";
-        return ["FIND_IN_SET({$placeholder}, `{$field}`)", [$placeholder => $value]];
+        return ["FIND_IN_SET({$placeholder}, " . $this->quote_identifier($field) . ")", [$placeholder => $value]];
     }
 
     /**
@@ -550,7 +1128,59 @@ class PDO_Wrapper {
      */
     public function truncate($table_name) {
         try {
-            $this->query("TRUNCATE TABLE `{$table_name}`");
+            $this->query("TRUNCATE TABLE " . $this->quote_identifier($table_name));
+            return true;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @usage
+     * Execute a stored procedure.
+     *
+     * @param string $procedure_name The name of the stored procedure.
+     * @param array $params An associative array of parameters for the procedure.
+     * @return PDOStatement The PDOStatement object on success.
+     * @throws PDOException If the procedure execution fails.
+     */
+    public function call_procedure($procedure_name, $params = []) {
+        $placeholders = [];
+        $call_params = [];
+        foreach ($params as $key => $value) {
+            $placeholder = ":param_{$key}";
+            $placeholders[] = $placeholder;
+            $call_params[$placeholder] = $value;
+        }
+        $sql = "CALL " . $this->quote_identifier($procedure_name) . "(" . implode(', ', $placeholders) . ")";
+        return $this->query($sql, $call_params);
+    }
+
+    /**
+     * @usage
+     * Create a new table based on a schema definition.
+     * This is a basic helper, not a full migration system.
+     *
+     * @param string $table_name The name of the table to create.
+     * @param array $columns An associative array defining columns (column_name => definition_string).
+     * Example: ['id' => 'INT AUTO_INCREMENT PRIMARY KEY', 'name' => 'VARCHAR(255) NOT NULL']
+     * Note: AUTO_INCREMENT/SERIAL/PRIMARY KEY syntax varies by DB.
+     * @return bool True on success, false on failure.
+     */
+    public function create_table($table_name, array $columns) {
+        if (empty($columns)) {
+            return false;
+        }
+
+        $column_definitions = [];
+        foreach ($columns as $column_name => $definition) {
+            $column_definitions[] = $this->quote_identifier($column_name) . " " . $definition;
+        }
+
+        $sql = "CREATE TABLE " . $this->quote_identifier($table_name) . " (" . implode(", ", $column_definitions) . ")";
+
+        try {
+            $this->query($sql);
             return true;
         } catch (PDOException $e) {
             return false;
@@ -610,4 +1240,45 @@ class PDO_Wrapper {
         return $this->pdo;
     }
 }
-?>
+
+/**
+ * Base Model Class for Object Mapping.
+ * Extend this class for your database entities.
+ */
+class BaseModel {
+    // You can define common properties or methods here
+    // For example, a constructor to hydrate properties from an array
+    public function __construct(array $data = []) {
+        foreach ($data as $key => $value) {
+            if (property_exists($this, $key)) {
+                $this->$key = $value;
+            }
+        }
+    }
+}
+
+// Example User Model (extend BaseModel)
+class User extends BaseModel {
+    public $id;
+    public $name;
+    public $email;
+    public $status;
+    public $skills;
+    public $created_at;
+
+    // You can add custom methods specific to the User model here
+    public function getFullName() {
+        return $this->name; // Simple example
+    }
+}
+
+// Example Product Model (extend BaseModel)
+class Product extends BaseModel {
+    public $product_id;
+    public $product_name;
+    public $price;
+
+    public function getFormattedPrice() {
+        return '$' . number_format($this->price, 2);
+    }
+}
