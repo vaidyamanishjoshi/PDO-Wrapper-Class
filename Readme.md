@@ -63,7 +63,7 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
    Create the necessary tables in your database. Here are example schemas for users and products tables: 
 
    
-##   **For MySQL:**
+##   *For MySQL:*
 
 		CREATE TABLE IF NOT EXISTS `users` (  
 					   `id` INT AUTO_INCREMENT PRIMARY KEY,  
@@ -79,7 +79,7 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
 					   `product_name` VARCHAR(255) NOT NULL,  
 					   `price` DECIMAL(10, 2) NOT NULL  
 				);
-##   **For PostgreSQL:**
+##   *For PostgreSQL:*
    
 			
 		CREATE TABLE IF NOT EXISTS "users" (  
@@ -98,7 +98,7 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
 				);
 				
 
-##   **For SQLite:** 
+##   *For SQLite:*
 				
 		CREATE TABLE IF NOT EXISTS users (  
 					   id INTEGER PRIMARY KEY AUTOINCREMENT,  
@@ -120,7 +120,7 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
 
 Once configured, you can use your $db object (or any other PDO_Wrapper instance) to interact with your database.
 
-Examples are gicen in documentation example html file
+Examples are given in documentation example html file
 
 
 
