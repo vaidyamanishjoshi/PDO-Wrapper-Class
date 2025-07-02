@@ -20,9 +20,13 @@ This setup provides a robust and secure way to interact with your MySQL database
 Configure db.php
 Open db.php and edit the database connection constants with your actual MySQL database credentials:
 
+
 define('DB_NAME', 'your_database_name'); // IMPORTANT: Change this
+
 define('DB_USER', 'your_username');     // IMPORTANT: Change this
+
 define('DB_PASS', 'your_password');     // IMPORTANT: Change this
+
 
 You can also optionally configure error email notifications by uncommenting and setting the set_error_email_config section in db.php.
 
