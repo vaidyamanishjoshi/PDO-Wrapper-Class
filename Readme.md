@@ -41,10 +41,9 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
 			try {  
 				// Create a new instance for your primary database  
 				$db = new PDO_Wrapper(DBTYPE, HST, DBN, USR, PWD, [], DISPLAY_DEBUG);
-     			}
-
+     			
 					
-## Example: Create another instance for a different database (e.g., logs)  
+               // Example: Create another instance for a different database (e.g., logs)  
  			
 		define('DBTYPE_LOGS', 'mysql');  
 		define('HST_LOGS', 'localhost');  
