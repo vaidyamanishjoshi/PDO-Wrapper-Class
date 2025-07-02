@@ -3,6 +3,8 @@
 /**
  * PDO_Wrapper Class
  *
+ https://github.com/vaidyamanishjoshi/PDO-Wrapper-Class
+ 
  * A robust and secure PDO wrapper for MySQL database interactions.
  * This class provides methods for connecting, executing queries,
  * sanitizing input, retrieving results, and performing CRUD operations
