@@ -2,15 +2,14 @@
 
 /**
  * PDO_Wrapper Class
- *
+ * https://github.com/vaidyamanishjoshi/PDO-Wrapper-Class
  * A robust and secure PDO wrapper for various database interactions (MySQL, PostgreSQL, SQLite, SQL Server).
  * This class provides methods for connecting, executing queries,
  * sanitizing input, retrieving results, and performing CRUD operations
  * with built-in security features like prepared statements.
  *
  * This version includes a basic Query Builder, Object Mapping capabilities,
- * dynamic identifier quoting for multi-database support, and a singleton
- * pattern for basic connection pooling.
+ * and dynamic identifier quoting for multi-database support.
  */
 class PDO_Wrapper {
     /**
@@ -48,19 +47,14 @@ class PDO_Wrapper {
      */
     private $display_debug = false;
 
-    /**
-     * @var PDO_Wrapper The single instance of the PDO_Wrapper class (for singleton pattern).
-     */
-    private static $instance = null;
-
     // Query Builder properties
     private $query_parts = [];
     private $query_bindings = [];
     private $model_class = null;
 
     /**
-     * Private Constructor: Initializes the database connection for a specified driver.
-     * Implemented as private for the Singleton pattern.
+     * Constructor: Initializes the database connection for a specified driver.
+     * Changed to public visibility to allow direct instantiation for multiple connections.
      *
      * @param string $driver The database driver (e.g., 'mysql', 'pgsql', 'sqlite', 'sqlsrv').
      * @param string $host The database host (ignored for SQLite).
@@ -71,7 +65,7 @@ class PDO_Wrapper {
      * @param bool $display_debug Flag to display debug error messages directly.
      * @throws PDOException If the connection fails or driver is unsupported.
      */
-    private function __construct($driver, $host, $db_name, $username, $password, $options = [], $display_debug = false) {
+    public function __construct($driver, $host, $db_name, $username, $password, $options = [], $display_debug = false) {
         $this->driver = strtolower($driver);
         $this->display_debug = $display_debug; // Set the debug flag
         $dsn = '';
@@ -121,27 +115,9 @@ class PDO_Wrapper {
 
     /**
      * Prevents deserialization of the instance.
+     * Changed to public visibility as required for magic methods like __wakeup().
      */
-    private function __wakeup() {}
-
-    /**
-     * Returns the single instance of the PDO_Wrapper class (Singleton pattern).
-     *
-     * @param string $driver The database driver (e.g., 'mysql', 'pgsql', 'sqlite', 'sqlsrv').
-     * @param string $host The database host (ignored for SQLite).
-     * @param string $db_name The database name or path for SQLite.
-     * @param string $username The database username (ignored for SQLite).
-     * @param string $password The database password (ignored for SQLite).
-     * @param array $options Optional PDO connection options.
-     * @param bool $display_debug Flag to display debug error messages directly.
-     * @return PDO_Wrapper The single instance of the PDO_Wrapper.
-     */
-    public static function get_instance($driver, $host, $db_name, $username, $password, $options = [], $display_debug = false) {
-        if (self::$instance === null) {
-            self::$instance = new self($driver, $host, $db_name, $username, $password, $options, $display_debug);
-        }
-        return self::$instance;
-    }
+    public function __wakeup() {}
 
     /**
      * Sets the error email configuration.
@@ -172,16 +148,6 @@ class PDO_Wrapper {
             echo "<p class='error'>Database Error: " . htmlspecialchars($error_message) . "</p>";
         }
     }
-
-    /**
-     * @usage
-     * Connect to a given MySQL server.
-     * This function is implicitly called by the constructor via the singleton `get_instance` method.
-     * No direct usage example needed as it's part of object instantiation.
-     *
-     * Example:
-     * $db = PDO_Wrapper::get_instance('mysql', 'localhost', 'your_db', 'your_user', 'your_password', [], true);
-     */
 
     /**
      * @usage
@@ -355,8 +321,7 @@ class PDO_Wrapper {
      */
     public function where_in($column, array $values) {
         if (empty($values)) {
-            $this->query_parts['where'][] = "1=0"; // Always false
-            return $this;
+            return ["1=0", []]; // Always false
         }
         $placeholders = [];
         foreach ($values as $index => $value) {
