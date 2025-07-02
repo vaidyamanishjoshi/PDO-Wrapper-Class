@@ -5,12 +5,12 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
 ## **Features**
 
 * **Multi-Database Support:** Works seamlessly with MySQL, PostgreSQL, SQLite, and SQL Server.  
-* **Flexible Connections:** Supports creating single or multiple database connections by directly instantiating the PDO\_Wrapper class.  
-* **Prepared Statements:** All queries use prepared statements to prevent SQL injection attacks.  
-* **Basic CRUD Operations:** Simple methods for insert(), insert\_multi(), update(), and delete().  
-* **Fluent Query Builder:** Chainable methods like select(), from(), where(), join(), orderBy(), limit(), offset(), group\_by(), having(), and union() for constructing complex queries programmatically.  
+* **Flexible Connections:** Supports creating *single or multiple database connections* by directly instantiating the PDO_Wrapper class.  
+* **Prepared Statements:** All queries use prepared statements to *prevent SQL injection attacks*.  
+* **Basic CRUD Operations:** Simple methods for *insert()*, *insert_multi()*, *update()*, and *delete()*.  
+* **Fluent Query Builder:** Chainable methods like *select()*, *from()*, *where()*, *join()*, *orderBy()*, *limit()*, *offset()*, *group_by()*, *having()*, and *union()* for constructing complex queries programmatically.  
 * **Object Mapping (ORM-like):** Map query results directly to custom PHP objects for an object-oriented data access layer.  
-* **Input Filtering:** Basic data sanitization using filter\_var.  
+* **Input Filtering:** Basic data sanitization using filter_var.  
 * **Error Handling:** Configurable error logging and email notifications on database errors.  
 * **Utility Methods:** Functions to check table/record existence, get last insert ID, count rows/columns, and execute stored procedures.  
 * **Dynamic Identifier Quoting:** Automatically quotes table and column names based on the database driver, allowing unquoted simple identifiers for MySQL.
@@ -18,12 +18,13 @@ A robust, secure, and easy-to-use PHP PDO wrapper designed to simplify database 
 ## **Installation**
 
 1. Download Files:  
-   Download pdo\_wrapper.php and db.php into your project directory.  
-2. Configure db.php:  
+   Download *pdo_wrapper.php* and *db.php* into your project directory.
+     
+3. Configure db.php:  
    
-   Open db.php and update the database connection constants (DBTYPE, HST, DBN, USR, PWD) with your actual database credentials.  
+   Open *db.php* and update the database connection constants (DBTYPE, HST, DBN, USR, PWD) with your actual database credentials.  
    
-   Set DISPLAY_DEBUG to 'true' during development to see database errors directly, but set it to false in production.  
+   *Set DISPLAY_DEBUG to 'true' during development to see database errors directly, but set it to false in production.*  
 
 
 ##  db.php will be like below
