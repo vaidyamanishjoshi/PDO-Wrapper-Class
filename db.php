@@ -1,19 +1,25 @@
 <?php
 
-// Define database connection constants
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_database_name'); // IMPORTANT: Change this to your actual database name
-define('DB_USER', 'your_username');     // IMPORTANT: Change this to your actual database username
-define('DB_PASS', 'your_password');     // IMPORTANT: Change this to your actual database password
+// Define database connection constants for the PRIMARY connection
+define('DBTYPE', 'mysql'); // Change this to 'pgsql', 'sqlite', or 'sqlsrv' as needed
+define('HST', 'localhost');
+define('DBN', 'your_database_name'); // IMPORTANT: Change this to your actual database name or SQLite file path
+define('USR', 'your_username');     // IMPORTANT: Change this to your actual database username (ignored for SQLite)
+define('PWD', 'your_password');     // IMPORTANT: Change this to your actual database password (ignored for SQLite)
+
+// Option to display database errors directly on the page (set to false in production)
+define('DISPLAY_DEBUG', true);
 
 // Include the PDO_Wrapper class file
-require_once 'pdo_wrapper.php';
+require_once 'pdo_wrapper.php'; // Ensure this path is correct
 
-// Instantiate the PDO_Wrapper class
+// Instantiate the PRIMARY PDO_Wrapper database connection
+// You can now create multiple instances of PDO_Wrapper for different databases or configurations
 try {
-    $db = new PDO_Wrapper(DB_HOST, DB_NAME, DB_USER, DB_PASS);
+    // Pass the driver, host, db name, user, password, and the DISPLAY_DEBUG flag
+    $db = new PDO_Wrapper(DBTYPE, HST, DBN, USR, PWD, [], DISPLAY_DEBUG);
 
-    // Optional: Configure error email notifications
+    // Optional: Configure error email notifications for the primary connection
     // Uncomment and set your email if you want to receive error alerts
     /*
     $db->set_error_email_config([
@@ -24,9 +30,20 @@ try {
     ]);
     */
 
+    // Example of creating another database connection (e.g., to a different database or server)
+    /*
+    define('DBTYPE_LOGS', 'mysql');
+    define('HST_LOGS', 'localhost');
+    define('DBN_LOGS', 'your_logs_database');
+    define('USR_LOGS', 'your_logs_username');
+    define('PWD_LOGS', 'your_logs_password');
+
+    $db_logs = new PDO_Wrapper(DBTYPE_LOGS, HST_LOGS, DBN_LOGS, USR_LOGS, PWD_LOGS, [], DISPLAY_DEBUG);
+    */
+
 } catch (PDOException $e) {
     // In a real application, you might redirect to an error page or show a friendly message.
-    // For now, we'll just show a generic error. The actual error is logged by the class.
+    // The actual error is logged by the class, and displayed if DISPLAY_DEBUG is true.
     die("A database connection error occurred. Please try again later.");
 }
 
