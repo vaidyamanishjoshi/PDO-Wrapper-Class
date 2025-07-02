@@ -124,7 +124,7 @@ Examples are given in documentation example html file
 
 
 
-## **License**
+## **Documentation**
 
 All Examples provided in html file
 
@@ -132,6 +132,6 @@ All Examples provided in html file
 
 Feel free to contribute to this PDO Wrapper class by opening issues or submitting pull requests.
 
-## **License**
 
-		\[Specify your license here, e.g., MIT License\]
+
+		
