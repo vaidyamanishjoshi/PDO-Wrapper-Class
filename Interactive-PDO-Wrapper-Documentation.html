@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive PDO Wrapper Class Documentation</title>
+    <!-- Chosen Palette: Calm Harmony (Slate grays, off-whites, with a soft blue accent) -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar for navigation and a main content area. The content is organized into logical, thematic sections (e.g., 'Query Builder', 'Basic CRUD') rather than a linear list of functions. This structure allows developers to quickly find related functionalities. Each function within a section is presented in a collapsible accordion to keep the UI clean and focused. This design prioritizes findability and ease of use over mirroring the source report's linear structure. -->
+    <!-- Visualization & Content Choices: Report Info: PHP function reference. -> Goal: Inform & Enable. -> Viz/Presentation Method: Structured HTML (accordions for functions, styled <pre><code> blocks for examples). -> Interaction: Sidebar navigation to switch sections, accordions to show/hide function details, and a 'Copy to Clipboard' button for code snippets. -> Justification: The interactive documentation format is superior to static markdown for developer reference. It enhances usability by providing quick navigation and easy access to code. -> Library/Method: Vanilla JS for interactions, Tailwind CSS for styling. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        pre, code {
+            font-family: 'Fira Code', monospace;
+        }
+        .sidebar-link.active {
+            background-color: #e0f2fe; /* sky-100 */
+            color: #0284c7; /* sky-600 */
+            font-weight: 600;
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            max-height: 0;
+            overflow: hidden;
+        }
+        .accordion-open .accordion-content {
+            max-height: 2000px; /* Adjust as needed */
+        }
+        .accordion-open .accordion-arrow {
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="flex h-screen bg-slate-50">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex-shrink-0 fixed lg:relative inset-y-0 left-0 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-30">
+            <div class="p-4">
+                <h1 class="text-2xl font-bold text-slate-900">PDO Wrapper</h1>
+                <p class="text-sm text-slate-500 mt-1">Class Documentation</p>
+            </div>
+            <nav class="mt-4 px-2">
+                <a href="#introduction" class="sidebar-link flex items-center px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="introduction">Introduction & Setup</a>
+                <a href="#crud" class="sidebar-link flex items-center px-4 py-2 mt-1 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="crud">Basic CRUD</a>
+                <a href="#query-builder" class="sidebar-link flex items-center px-4 py-2 mt-1 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="query-builder">Query Builder</a>
+                <a href="#raw-queries" class="sidebar-link flex items-center px-4 py-2 mt-1 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="raw-queries">Raw Queries & Results</a>
+                <a href="#object-mapping" class="sidebar-link flex items-center px-4 py-2 mt-1 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="object-mapping">Object Mapping (ORM)</a>
+                <a href="#utilities" class="sidebar-link flex items-center px-4 py-2 mt-1 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="utilities">Helpers & Utilities</a>
+                <a href="#configuration" class="sidebar-link flex items-center px-4 py-2 mt-1 text-slate-700 hover:bg-slate-100 rounded-md transition-colors duration-200" data-target="configuration">Configuration & Debug</a>
+            </nav>
+        </aside>
+
+        <!-- Overlay for mobile -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-50 z-20 hidden lg:hidden"></div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white border-b border-slate-200 p-4 flex items-center justify-between lg:hidden">
+                <button id="menu-button" class="text-slate-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+                 <h1 class="text-xl font-bold text-slate-900">PDO Wrapper Docs</h1>
+                 <div></div>
+            </header>
+            
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 md:p-8">
+                <div class="max-w-4xl mx-auto">
+                    <!-- Introduction & Setup Section -->
+                    <section id="introduction" class="content-section">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Introduction & Setup</h2>
+                        <p class="mt-4 text-slate-600">
+                            This document provides detailed examples for using each function within the <code>PDO_Wrapper</code> class. This class provides a secure and feature-rich interface for database interactions, including a query builder, ORM-like features, and multi-database support.
+                        </p>
+                        <div class="mt-6">
+                            <h3 class="text-xl font-semibold text-slate-800 mb-2">Before you begin:</h3>
+                            <ol class="list-decimal list-inside space-y-2 text-slate-600">
+                                <li>Ensure you have the <code>pdo_wrapper.php</code> and <code>db.php</code> files in the same directory.</li>
+                                <li>Configure <code>db.php</code> with your actual database credentials and desired <code>DBTYPE</code> (e.g., 'mysql', 'pgsql'). Set <code>DISPLAY_DEBUG</code> to <code>true</code> for development.</li>
+                                <li>Create the necessary tables (<code>users</code>, <code>products</code>, etc.) in your database. Schema examples are provided in the relevant sections.</li>
+                            </ol>
+                        </div>
+                        
+                        <!-- Accordion for get_instance -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_instance()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">This is the entry point to get the database connection. It implements a singleton pattern, ensuring only one database connection per script execution.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Get the database instance (connects if not already connected)
+$db = PDO_Wrapper::get_instance(DBTYPE, HST, DBN, USR, PWD, [], DISPLAY_DEBUG);
+
+// $db will always refer to the same connection throughout the script
+$another_db_instance = PDO_Wrapper::get_instance(DBTYPE, HST, DBN, USR, PWD, [], DISPLAY_DEBUG);
+echo "Are both instances the same? " . ($db === $another_db_instance ? "Yes" : "No"); // Output: Yes
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Basic CRUD Section -->
+                    <section id="crud" class="content-section hidden">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Basic CRUD</h2>
+                        <p class="mt-4 text-slate-600">Core Create, Read, Update, and Delete operations made simple and secure. These methods automatically handle identifier quoting for cross-database compatibility.</p>
+
+                        <!-- Accordion for insert -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::insert()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Inserts a single row into a table and returns the last inserted ID.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$user_data = [
+    'name' => 'Alice Smith',
+    'email' => 'alice.smith@example.com',
+    'status' => 'active',
+];
+$inserted_id = $db->insert('users', $user_data);
+if ($inserted_id) {
+    echo "User inserted with ID: {$inserted_id}";
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for insert_multi -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::insert_multi()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Inserts multiple rows into a table in a single query for better performance.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$products_data = [
+    ['product_name' => 'Monitor', 'price' => 250.00],
+    ['product_name' => 'Webcam', 'price' => 49.99],
+];
+$affected_rows = $db->insert_multi('products', $products_data);
+echo "Inserted {$affected_rows} products.";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for update -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::update()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Updates records in a table based on conditions. It supports simple key-value conditions as well as `IN` clauses.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Simple update
+$update_data = ['status' => 'suspended'];
+$conditions = ['email' => 'alice.smith@example.com'];
+$affected_rows = $db->update('users', $update_data, $conditions);
+echo "Updated {$affected_rows} user(s).";
+
+// Update with IN clause
+$update_data_in = ['status' => 'active'];
+$conditions_in = ['id' => [1, 2, 3]]; // Update users with IDs 1, 2, or 3
+$affected_rows_in = $db->update('users', $update_data_in, $conditions_in);
+echo "Updated {$affected_rows_in} user(s).";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for delete -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::delete()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Deletes records from a table based on conditions.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Simple delete
+$conditions = ['email' => 'alice.smith@example.com'];
+$affected_rows = $db->delete('users', $conditions);
+echo "Deleted {$affected_rows} user(s).";
+
+// Delete with IN clause
+$conditions_in = ['product_id' => [1, 2]]; // Delete products with IDs 1 or 2
+$affected_rows_in = $db->delete('products', $conditions_in);
+echo "Deleted {$affected_rows_in} product(s).";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Query Builder Section -->
+                    <section id="query-builder" class="content-section hidden">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Query Builder</h2>
+                        <p class="mt-4 text-slate-600">Construct complex SQL queries programmatically using a fluent, chainable interface. This reduces the need to write raw SQL and helps prevent errors.</p>
+                        
+                        <!-- Accordion for select/from/get/first -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">select(), from(), get(), first()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">The core methods for building a SELECT query. <code>get()</code> executes the query and fetches all results, while <code>first()</code> fetches only the first result.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Get all users
+$users = $db->select()->from('users')->get();
+
+// Get specific columns with an alias
+$products = $db->select('product_id AS id, product_name AS name, price')
+               ->from('products', 'p')
+               ->get();
+
+// Get the first active user
+$first_active_user = $db->select()->from('users')->where('status', 'active')->first();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for where/and_where/or_where -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">where(), and_where(), or_where()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Add conditions to your query. The first `where` starts the clause, subsequent calls to `where` or `and_where` add `AND` conditions. `or_where` adds an `OR` condition.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Multiple AND WHERE conditions
+$active_user = $db->select()->from('users')
+                  ->where('status', '=', 'active')
+                  ->and_where('name', 'LIKE', '%User 2%')
+                  ->first();
+
+// OR WHERE conditions
+$users_or_id = $db->select()->from('users')
+                  ->where('id', 1)
+                  ->or_where('id', 2)
+                  ->get();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for where_in/where_not_in/where_like -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">where_in(), where_not_in(), where_like()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Convenience methods for common WHERE clauses.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$users_in_ids = $db->select()->from('users')
+                   ->where_in('id', [1, 3, 5])
+                   ->get();
+
+$users_not_in_status = $db->select()->from('users')
+                          ->where_not_in('status', ['inactive', 'suspended'])
+                          ->get();
+
+$users_like_name = $db->select()->from('users')
+                      ->where_like('name', '%Test%')
+                      ->get();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for join -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">join()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Add `INNER`, `LEFT`, `RIGHT`, or `FULL` joins to your query. Assumes a logical relationship exists between tables.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Assumes an 'orders' table with a 'user_id' foreign key
+$user_orders = $db->select('users.name, orders.order_date, orders.total')
+                  ->from('users')
+                  ->join('orders', 'users.id = orders.user_id', 'LEFT')
+                  ->where('users.id', 1)
+                  ->get();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for group_by/having -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">group_by(), having()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Group results by one or more columns and filter those groups with a `HAVING` clause.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Group users by status and count them, only showing groups with more than 1 user
+$status_counts = $db->select('status, COUNT(id) as user_count')
+                    ->from('users')
+                    ->group_by('status')
+                    ->having('user_count', '>', 1)
+                    ->get();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for order_by/limit/offset -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">order_by(), limit(), offset()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Control the sorting and pagination of your results.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Get the 3 latest users
+$latest_users = $db->select()->from('users')
+                   ->orderBy('created_at', 'DESC')
+                   ->limit(3)
+                   ->get();
+
+// Get the second page of users (e.g., 10 records per page)
+$page = 2;
+$perPage = 10;
+$paginated_users = $db->select()->from('users')
+                      ->limit($perPage)
+                      ->offset(($page - 1) * $perPage)
+                      ->get();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for union -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">union()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Combine the result set of two or more SELECT statements.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Example of UNION (combining results from two similar queries)
+$union_results = $db->select('name AS item_name, email AS item_value')
+                    ->from('users')
+                    ->union("SELECT product_name, price FROM products", [], true) // UNION ALL
+                    ->get();
+// This will return results with 'item_name' and 'item_value' columns
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
+                    
+                    <!-- Raw Queries & Results Section -->
+                    <section id="raw-queries" class="content-section hidden">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Raw Queries & Results</h2>
+                        <p class="mt-4 text-slate-600">These methods provide direct interaction with PDO statements and results, useful when the Query Builder doesn't cover a specific need.</p>
+
+                        <!-- Accordion for query -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::query()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Executes arbitrary SQL queries using prepared statements for security. Returns a `PDOStatement` object.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Select all users
+$stmt = $db->query("SELECT id, name, email FROM users");
+$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Insert data
+$db->query("INSERT INTO users (name, email, status) VALUES (:name, :email, :status)", [
+    ':name' => 'Raw Insert User',
+    ':email' => 'raw.insert@example.com',
+    ':status' => 'active'
+]);
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for get_results -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_results()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Fetches all rows from a `PDOStatement` object. Can return associative arrays, generic objects, or custom model objects.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$stmt = $db->query("SELECT id, name, email FROM users LIMIT 3");
+$users_array = $db->get_results($stmt); // As associative arrays
+
+$stmt_obj = $db->query("SELECT id, name FROM products LIMIT 2");
+$products_obj = $db->get_results($stmt_obj, PDO::FETCH_OBJ); // As generic objects
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for get_row -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_row()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Fetches a single row from a `PDOStatement` object.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$stmt = $db->query("SELECT id, name, email FROM users WHERE id = 1");
+$user_row = $db->get_row($stmt); // As associative array
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for num_rows -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::num_rows()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Retrieves the number of rows affected by the last SQL statement. Note: `rowCount()` on SELECT statements might not be reliable across all drivers.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$stmt = $db->query("SELECT * FROM users");
+$num_rows = $db->num_rows($stmt);
+echo "Number of users: {$num_rows}";
+
+$affected_stmt = $db->query("UPDATE users SET status = 'active' WHERE id > 0");
+$affected_rows = $db->num_rows($affected_stmt);
+echo "Rows affected by update: {$affected_rows}";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for num_cols -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::num_cols()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Retrieves the number of columns in the result set of a executed query.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$stmt = $db->query("SELECT id, name, email FROM users");
+$num_cols = $db->num_cols($stmt);
+echo "Number of columns: {$num_cols}";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for last_insert_id -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::last_insert_id()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Retrieves the ID of the last inserted row. Typically used after an `INSERT` query on a table with an `AUTO_INCREMENT` primary key.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$db->query("INSERT INTO users (name, email, status) VALUES ('Last ID User', 'last.id@example.com', 'active')");
+$last_id = $db->last_insert_id();
+echo "Last inserted user ID: {$last_id}";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Object Mapping (ORM) Section -->
+                    <section id="object-mapping" class="content-section hidden">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Object Mapping (ORM)</h2>
+                        <p class="mt-4 text-slate-600">Map database rows to custom PHP objects, allowing you to interact with your data in an object-oriented way. Requires defining simple model classes that extend `BaseModel`.</p>
+
+                        <!-- Accordion for as_object -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::as_object()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Sets the model class for object mapping when using the Query Builder's `get()` or `first()` methods.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Define a simple User model (in pdo_wrapper.php or a separate file)
+/*
+class User extends BaseModel {
+    public $id;
+    public $name;
+    public $email;
+    public function getFullName() { return $this->name; }
+}
+*/
+
+// Fetch users as User objects
+$user_objects = $db->select()->from('users')->as_object('User')->limit(2)->get();
+foreach ($user_objects as $user) {
+    if ($user instanceof User) {
+        echo "User: {$user->getFullName()} (ID: {$user->id})";
+    }
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for get_results (with object mapping) -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_results() (with object mapping)</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Fetch all results from a raw `PDOStatement` directly into custom model objects.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$stmt = $db->query("SELECT id, name, email FROM users LIMIT 2");
+$user_models = $db->get_results($stmt, PDO::FETCH_ASSOC, 'User');
+foreach ($user_models as $user) {
+    if ($user instanceof User) {
+        echo "User: {$user->getFullName()} (ID: {$user->id})";
+    }
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for get_row (with object mapping) -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_row() (with object mapping)</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Fetch a single result from a raw `PDOStatement` directly into a custom model object.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$stmt = $db->query("SELECT id, name, email FROM users WHERE id = 1");
+$user_model = $db->get_row($stmt, PDO::FETCH_ASSOC, 'User');
+if ($user_model instanceof User) {
+    echo "User: {$user_model->getFullName()} (ID: {$user_model->id})";
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Helpers & Utilities Section -->
+                    <section id="utilities" class="content-section hidden">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Helpers & Utilities</h2>
+                        <p class="mt-4 text-slate-600">Additional utility methods for common database tasks, schema management, and security checks.</p>
+
+                        <!-- Accordion for filter -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::filter()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Filters input data using PHP's `filter_var` for basic sanitization.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$unsafe_html = "&lt;script&gt;alert('xss');&lt;/script&gt;Hello & World!";
+$filtered_html = $db->filter($unsafe_html);
+echo "Filtered HTML: " . htmlspecialchars($filtered_html);
+
+$unsafe_email = "user@example.com; DROP TABLE users;";
+$filtered_email = $db->filter($unsafe_email, FILTER_SANITIZE_EMAIL);
+echo "Filtered Email: " . htmlspecialchars($filtered_email);
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for escape -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::escape()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Escapes a string or array of strings for use in SQL queries. **Prefer prepared statements for values.**</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$unsafe_string = "O'Reilly's book";
+$escaped_string = $db->escape($unsafe_string);
+echo "Escaped: " . htmlspecialchars($escaped_string);
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for has_mysql_function_calls -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::has_mysql_function_calls()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">A basic security check to detect common MySQL function calls in a string (e.g., SQL injection patterns). Note: This is MySQL-specific.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$input = "some_value UNION SELECT password FROM users";
+echo "Has MySQL function calls? " . ($db->has_mysql_function_calls($input) ? "Yes" : "No");
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for table_exists -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::table_exists()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Checks if a given table exists in the connected database, using driver-specific queries.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+echo "Table 'users' exists? " . ($db->table_exists('users') ? "Yes" : "No");
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for record_exists -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::record_exists()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Checks if a record exists in a table based on provided conditions.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+echo "Record with email 'test@example.com' exists? " . ($db->record_exists('users', ['email' => 'test@example.com']) ? "Yes" : "No");
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for truncate -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::truncate()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Removes all rows from a table, effectively resetting it.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$truncated = $db->truncate('products');
+if ($truncated) {
+    echo "Table 'products' truncated successfully.";
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for call_procedure -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::call_procedure()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Executes a stored procedure with parameters. **Requires the stored procedure to be defined in your database.**</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+// Example MySQL Stored Procedure:
+/*
+DELIMITER //
+CREATE PROCEDURE GetUserById(IN userId INT)
+BEGIN
+    SELECT id, name, email FROM users WHERE id = userId;
+END //
+DELIMITER ;
+*/
+$stmt_proc = $db->call_procedure('GetUserById', ['userId' => 1]);
+$user_from_proc = $db->get_row($stmt_proc);
+print_r($user_from_proc);
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for create_table -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::create_table()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">A basic helper for programmatic table creation. Note that column definitions (e.g., `AUTO_INCREMENT`) are database-specific.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$new_table_name = 'app_settings';
+$columns = [
+    'setting_id' => 'INT AUTO_INCREMENT PRIMARY KEY', // For MySQL
+    'setting_name' => 'VARCHAR(255) UNIQUE NOT NULL',
+    'setting_value' => 'TEXT',
+];
+$table_created = $db->create_table($new_table_name, $columns);
+if ($table_created) {
+    echo "Table '{$new_table_name}' created successfully.";
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for in -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::in()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Helper to generate an SQL `IN` clause and its parameters for prepared statements. Used internally by CRUD methods, but can be used for custom raw queries.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+list($in_clause, $in_params) = $db->in('id', [10, 20, 30]);
+// Use in a custom query: $stmt = $db->query("SELECT * FROM users WHERE {$in_clause}", $in_params);
+echo "Generated IN clause: {$in_clause}";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for find_in_set -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::find_in_set()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Helper to generate an SQL `FIND_IN_SET` clause (MySQL-specific) and its parameters. Used internally by CRUD methods for this specific scenario.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+list($find_clause, $find_params) = $db->find_in_set('skills', 'PHP');
+// Use in a custom query (MySQL only): $stmt = $db->query("SELECT * FROM users WHERE {$find_clause}", $find_params);
+echo "Generated FIND_IN_SET clause: {$find_clause}";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Configuration & Debug Section -->
+                    <section id="configuration" class="content-section hidden">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Configuration & Debug</h2>
+                        <p class="mt-4 text-slate-600">Methods related to configuring error handling and retrieving debug information.</p>
+
+                        <!-- Accordion for set_error_email_config -->
+                        <div class="accordion-item mt-8 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::set_error_email_config()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Configures settings for sending email notifications on database errors. Requires a mail server configured on your PHP environment.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$db->set_error_email_config([
+    'send_on_error' => true,
+    'to_email' => 'admin@yourdomain.com',
+    'from_email' => 'noreply@yourdomain.com',
+    'subject' => 'URGENT: Database Error Alert!'
+]);
+echo "Error email configuration set.";
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for send_error_email -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::send_error_email()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Sends an email with a given error message. Typically called internally by `handle_error` if configured, but can be called directly.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$custom_error = "A critical application error occurred: User login failed.";
+$email_sent = $db->send_error_email($custom_error);
+if ($email_sent) {
+    echo "Custom error email sent successfully.";
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for get_query_count -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_query_count()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Returns the total number of queries executed by the current `PDO_Wrapper` instance.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$db->query("SELECT 1 FROM users");
+$db->insert('products', ['product_name' => 'Temp Item', 'price' => 1.00]);
+echo "Total queries executed: " . $db->get_query_count();
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion for get_pdo -->
+                        <div class="accordion-item mt-4 bg-white border border-slate-200 rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                                <span class="text-lg font-semibold text-sky-700">PDO_Wrapper::get_pdo()</span>
+                                <span class="accordion-arrow transition-transform duration-300">&#x276F;</span>
+                            </button>
+                            <div class="accordion-content px-4 pb-4">
+                                <p class="text-slate-600">Returns the underlying raw `PDO` object. Use with caution for advanced operations not directly covered by the wrapper.</p>
+                                <div class="code-block mt-4">
+                                    <pre class="bg-slate-100 text-slate-800 p-4 rounded-md text-sm relative"><button class="copy-btn absolute top-2 right-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-semibold py-1 px-2 rounded">Copy</button><code>&lt;?php
+$raw_pdo = $db->get_pdo();
+if ($raw_pdo instanceof PDO) {
+    echo "Raw PDO object retrieved successfully.";
+    // Example: $raw_pdo->beginTransaction();
+}
+?&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            const menuButton = document.getElementById('menu-button');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+            const contentSections = document.querySelectorAll('.content-section');
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            const copyButtons = document.querySelectorAll('.copy-btn');
+
+            function showSection(targetId) {
+                contentSections.forEach(section => {
+                    section.classList.toggle('hidden', section.id !== targetId);
+                });
+                sidebarLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('data-target') === targetId);
+                });
+            }
+            
+            function closeSidebar() {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            }
+
+            // Initial section display based on hash or default
+            const initialSection = window.location.hash ? window.location.hash.substring(1) : 'introduction';
+            showSection(initialSection);
+
+            // Sidebar navigation
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('data-target');
+                    window.location.hash = targetId;
+                    showSection(targetId);
+                    if (window.innerWidth < 1024) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+            // Accordion functionality
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', function () {
+                    this.parentElement.classList.toggle('accordion-open');
+                });
+            });
+
+            // Mobile menu toggle
+            if (menuButton) {
+                menuButton.addEventListener('click', function () {
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebarOverlay.classList.remove('hidden');
+                });
+            }
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeSidebar);
+            }
+
+            // Copy to clipboard
+            copyButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const code = this.nextElementSibling.innerText;
+                    const el = document.createElement('textarea');
+                    el.value = code;
+                    document.body.appendChild(el);
+                    el.select();
+                    // Using execCommand for better compatibility in sandboxed environments like this one
+                    try {
+                        document.execCommand('copy');
+                        this.innerText = 'Copied!';
+                        setTimeout(() => { this.innerText = 'Copy'; }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        this.innerText = 'Error';
+                        setTimeout(() => { this.innerText = 'Copy'; }, 2000);
+                    }
+                    document.body.removeChild(el);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
